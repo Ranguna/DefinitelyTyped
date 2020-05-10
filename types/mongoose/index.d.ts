@@ -775,7 +775,7 @@ declare module "mongoose" {
      * the child schema first before passing it into its parent.
      * @event init Emitted after the schema is compiled into a Model.
      */
-    constructor(definition?: SchemaDefinition, options?: SchemaOptions);
+    constructor(definition?: SchemaDefinition<T>, options?: SchemaOptions);
 
     /** Adds key path / schema type pairs to this schema. */
     add(obj: SchemaDefinition, prefix?: string): void;
@@ -820,10 +820,8 @@ declare module "mongoose" {
      * Adds an instance method to documents constructed from Models compiled from this schema.
      * If a hash of name/fn pairs is passed as the only argument, each name/fn pair will be added as methods.
      */
-    method<F extends keyof T>(method: F, fn: T[F]): this;
-    method(methodObj: {
-      [F in keyof T]: T[F]
-    }): this;
+    method(method: string, fn: Function): this;
+    method(methodObj: { [name: string]: Function }): this;
 
     /**
      * Gets/sets schema paths.
@@ -1128,11 +1126,23 @@ declare module "mongoose" {
     updatedAt?: boolean | string;
   }
 
+  type MapToSchemaType<T> =
+    T extends string ? typeof String :
+    T extends number ? typeof Number :
+    T extends boolean ? typeof Boolean :
+    T extends Date ? typeof Date :
+    T extends Buffer ? typeof Buffer :
+    T extends Array<any> ? typeof Array :
+    T extends mongodb.Decimal128 ? typeof mongodb.Decimal128 :
+    T extends mongodb.ObjectID ? typeof mongodb.ObjectID :
+    T extends mongodb.ObjectId ? typeof mongodb.ObjectId :
+    any;
+
   /*
    * Intellisense for Schema definitions
    */
-  interface SchemaDefinition {
-    [path: string]: SchemaTypeOpts<any> | Schema | SchemaType;
+  type SchemaDefinition<D = any> = {
+    [path in keyof D]: SchemaTypeOpts<D[path]> | Schema | SchemaType;
   }
 
   /*
@@ -1164,7 +1174,7 @@ declare module "mongoose" {
     alias?: string;
 
     /* Common Options for all schema types */
-    type?: T;
+    type?: MapToSchemaType<T>;
 
     /** Sets a default value for this SchemaType. */
     default?: SchemaTypeOpts.DefaultFn<T> | T;
